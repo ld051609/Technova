@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, TextInput, Button, Alert, ActivityIndicator, Dimensions } from 'react-native';
+import { StyleSheet, View, TextInput, Button, Alert, ActivityIndicator, Keyboard } from 'react-native';
+
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
+import decodePolyline from '../component/decodePolyline';
 
 export default function App() {
   const [location, setLocation] = useState(null);
@@ -9,17 +11,17 @@ export default function App() {
   const [destination, setDestination] = useState('');
   const [directions, setDirections] = useState([]);
   const [destinationCoordinates, setDestinationCoordinates] = useState(null);
-  const [loading, setLoading] = useState(true); // New state for loading
-  const [isTracking, setIsTracking] = useState(true); // To control location tracking
-
+  const [loading, setLoading] = useState(true);
+  const [isWalking, setIsWalking] = useState(false); // New state to track walking status
+  const [nearbyCrimes, setNearbyCrimes] = useState([]);
 
   useEffect(() => {
-    (async () => {
+    const fetchLocation = async () => {
       // Request location permission
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setErrorMsg('Permission to access location was denied');
-        setLoading(false); // Set loading to false if permission is denied
+        setLoading(false);
         return;
       }
 
@@ -27,36 +29,93 @@ export default function App() {
       try {
         let currentLocation = await Location.getCurrentPositionAsync({});
         setLocation(currentLocation.coords);
-        console.log('Current location:', currentLocation);
       } catch (error) {
         console.error('Error fetching location:', error);
         setErrorMsg('Error fetching location');
       } finally {
-        setLoading(false); // Ensure loading is set to false when done
+        setLoading(false);
       }
 
-      // Watch location changes
+      // Watch location changes only if user is walking
       const subscription = Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
-          distanceInterval: 1, // meters
+          distanceInterval: 20,
         },
         (newLocation) => {
           setLocation(newLocation.coords);
+          if (isWalking) { // Send location only if user is walking
+            // sendLocationToBackend(newLocation.coords);
+          }
         }
       );
 
-      // Clean up the subscription on unmount
       return () => {
         subscription.remove();
       };
-    })();
-  }, []);
+    };
 
-  const handleDestinationInput = (text) => {
-    setDestination(text);
+    fetchLocation();
+  }, [isWalking]); // Depend on isWalking
+
+  // Function to start walking (triggered when user starts navigating)
+  const startWalking = () => {
+    setIsWalking(true);
   };
 
+  // Function to stop walking (when the route is completed or user stops)
+  const stopWalking = () => {
+    setIsWalking(false);
+  };
+
+  // Send location to backend to check for nearby crime areas
+  const sendLocationToBackend = async (coords) => {
+    if (!coords) {
+      console.log('No location data');
+      return;
+    }
+  
+    try {
+      const response = await fetch('https://9de8-129-97-124-137.ngrok-free.app/check_crime', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        }),
+      });
+  
+      const data = await response.json();
+  
+      // Trigger alert only when walking and there's danger
+      if (isWalking && data.status === 'danger' && data.nearby_crimes && data.nearby_crimes.length > 0) {
+        const crimeDetails = data.nearby_crimes.map(crime => 
+          `Location: ${crime.NearestIntersectionLocation}\n` +
+          `Rating: ${crime.rating}\n` +
+          `Crime Rate: ${crime.crime_rate}\n` +
+          `Distance: ${crime.distance.toFixed(2)} meters`
+        ).join('\n\n');
+  
+        // Show alert with detailed crime information
+        Alert.alert('Warning', 'You are near a crime area!\n\n' + crimeDetails, [
+          {
+            text: 'View Details',
+            onPress: () => console.log(crimeDetails),
+          },
+          { text: 'OK' },
+        ]);
+      }
+      // If the status is safe, log this or handle it in some way
+      else if (data.status === 'safe') {
+        console.log('You are in a safe area.');
+      }
+    } catch (error) {
+      console.error('Error sending location:', error);
+    }
+  };
+  
   const handleSendDestination = async () => {
     try {
       if (!destination) {
@@ -64,7 +123,11 @@ export default function App() {
         return;
       }
 
-      // Send current location and destination to your backend
+      if (!location) {
+        Alert.alert('Error', 'Location data is not available.');
+        return;
+      }
+
       const response = await fetch('https://9de8-129-97-124-137.ngrok-free.app/get_directions', {
         method: 'POST',
         headers: {
@@ -82,19 +145,24 @@ export default function App() {
       }
 
       const data = await response.json();
-      console.log('Response from backend:', data);
 
-      // Extract polyline points from directions and decode them
-      if (data.routes && data.routes.length > 0) {
-        const points = decodePolyline(data.routes[0].overview_polyline.points);
-        setDirections(points);
-        
-        // Set the destination coordinates (using the last point of the polyline for simplicity)
-        const destinationLatLng = {
-          latitude: points[points.length - 1].latitude,
-          longitude: points[points.length - 1].longitude,
-        };
-        setDestinationCoordinates(destinationLatLng);
+        // Clear the input field and dismiss the keyboard
+        setDestination('');
+        Keyboard.dismiss();
+        if (data.nearby_crimes){
+          setNearbyCrimes(data.nearby_crimes);
+          console.log('CRIME HERE' + data.nearby_crimes);
+        }
+        if (data.overview_polyline) {
+            const points = decodePolyline(data.overview_polyline);
+            setDirections(points);
+
+            const destinationLatLng = {
+                latitude: data.destination_lat, // Get destination latitude from the response
+                longitude: data.destination_lng, // Get destination longitude from the response
+            };
+            setDestinationCoordinates(destinationLatLng);
+            startWalking(); // Set walking to true when a route is started
       } else {
         Alert.alert('Error', 'Could not retrieve directions.');
       }
@@ -104,65 +172,21 @@ export default function App() {
     }
   };
 
-  // Decode polyline from Google Maps
-  const decodePolyline = (t) => {
-    const len = t.length;
-    const coords = [];
-    let index = 0;
-    let lat = 0;
-    let lng = 0;
-
-    while (index < len) {
-      let b = 0;
-      let shift = 0;
-      let result = 0;
-
-      let byte;
-      do {
-        byte = t.charCodeAt(index++) - 63;
-        result |= (byte & 0x1f) << shift;
-        shift += 5;
-      } while (byte >= 0x20);
-
-      const dlat = ((result >> 1) ^ (-(result & 1)));
-      lat += dlat;
-
-      shift = 0;
-      result = 0;
-      do {
-        byte = t.charCodeAt(index++) - 63;
-        result |= (byte & 0x1f) << shift;
-        shift += 5;
-      } while (byte >= 0x20);
-
-      const dlng = ((result >> 1) ^ (-(result & 1)));
-      lng += dlng;
-
-      coords.push({
-        latitude: (lat / 1E5),
-        longitude: (lng / 1E5),
-      });
-    }
-
-    return coords;
-  };
-
   return (
     <View style={styles.container}>
-      {loading ? ( // Conditional rendering for loading
+      {loading ? (
         <ActivityIndicator size="large" color="#0000ff" style={styles.loadingIndicator} />
       ) : (
         <>
-          <View style={styles.searchContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your destination"
-              placeholderTextColor="gray"
-              onChangeText={handleDestinationInput}
-              value={destination}
-            />
-            <Button title="Search" style={styles.button} onPress={handleSendDestination} />
-          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your destination"
+            onChangeText={destination => setDestination(destination)}
+            placeholderTextColor="gray"
+            value={destination}
+          />
+          <Button title="Search" style={styles.button} onPress={handleSendDestination} />
+
           <MapView
             style={styles.map}
             initialRegion={{
@@ -187,15 +211,31 @@ export default function App() {
               <Marker
                 coordinate={destinationCoordinates}
                 title="Destination"
-                pinColor="blue" // Customize the destination marker color
+                pinColor="blue"
               />
             )}
             {directions.length > 0 && (
               <Polyline
                 coordinates={directions}
-                strokeColor="#000" // Customize the route color
+                strokeColor="#000"
                 strokeWidth={6}
               />
+            )}
+
+            {/* Render markers for nearby crimes */}
+            {nearbyCrimes.length > 0 && (
+              nearbyCrimes.map((crime, index) => (
+                <Marker
+                  key={index}
+                  coordinate={{
+                    latitude: crime['Latitude'], // Ensure this is the correct property name
+                    longitude: crime['Longitude'], // Ensure this is the correct property name
+                  }}
+                  title={`Crime at ${crime['NearestIntersectionLocation']}`}
+                  description={`Rating: ${crime.rating}\nCrime Rate: ${crime.crime_rate}\nDistance: ${crime.distance.toFixed(2)} meters`}
+                  pinColor="red"
+                />
+              ))
             )}
           </MapView>
         </>

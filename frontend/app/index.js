@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, TextInput, Button, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, TextInput, Button, Alert, ActivityIndicator, Dimensions } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 
@@ -11,6 +11,7 @@ export default function App() {
   const [destinationCoordinates, setDestinationCoordinates] = useState(null);
   const [loading, setLoading] = useState(true); // New state for loading
   const [isTracking, setIsTracking] = useState(true); // To control location tracking
+
 
   useEffect(() => {
     (async () => {
@@ -152,13 +153,16 @@ export default function App() {
         <ActivityIndicator size="large" color="#0000ff" style={styles.loadingIndicator} />
       ) : (
         <>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your destination"
-            onChangeText={handleDestinationInput}
-            value={destination}
-          />
-          <Button title="Send Destination" onPress={handleSendDestination} />
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your destination"
+              placeholderTextColor="gray"
+              onChangeText={handleDestinationInput}
+              value={destination}
+            />
+            <Button title="Search" style={styles.button} onPress={handleSendDestination} />
+          </View>
           <MapView
             style={styles.map}
             initialRegion={{
@@ -197,27 +201,65 @@ export default function App() {
         </>
       )}
     </View>
-  );
-}
+  )
+};
+  
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    searchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      margin: 5,
+      paddingHorizontal: 10,
+      backgroundColor: '#F5F5F5',
+      position: 'absolute', // Position search input absolutely
+      top: 10, // Distance from the top
+      left: 10,
+      right: 10,
+      zIndex: 1, 
+      padding: 5,
+      borderRadius: 30,
+      shadowColor: '#000',
+      shadowOffset: {width: 0, height: 2},
+      shadowOpacity: 0.5,
+      shadowRadius: 2,
+      elevation: 3, // Shadow effect for better visibility
+    },
+    input: {
+      flex: 1,
+      borderRadius: 5,
+      padding: 5,
+      fontSize: 16,
+      paddingHorizontal: 10,
+      marginRight: 10,
+      borderColor: 'gray',
+      placeholderTextColor: 'gray', // Make sure the placeholder is visible
+    
+    },
+    button: {
+      marginLeft: 5,
+      backgroundColor: '#4285F4',
+      borderRadius: 20,
+      padding: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  input: {
-    height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    margin: 10,
-    borderRadius: 5,
-  },
-  map: {
-    flex: 1,
-  },
-  loadingIndicator: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
+    },
+    map: {
+      ...StyleSheet.absoluteFillObject,
+      width: '100%',
+      height: '80%',
+      marginTop: 90,
+  
+    },
+    loadingIndicator: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+  })
+
+  

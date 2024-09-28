@@ -12,7 +12,7 @@ export default function App() {
   const [destinationCoordinates, setDestinationCoordinates] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isWalking, setIsWalking] = useState(false); // New state to track walking status
-
+  const [nearbyCrimes, setNearbyCrimes] = useState([]);
   useEffect(() => {
     const fetchLocation = async () => {
       // Request location permission
@@ -27,7 +27,6 @@ export default function App() {
       try {
         let currentLocation = await Location.getCurrentPositionAsync({});
         setLocation(currentLocation.coords);
-        console.log('Current location:', currentLocation);
       } catch (error) {
         console.error('Error fetching location:', error);
         setErrorMsg('Error fetching location');
@@ -44,7 +43,7 @@ export default function App() {
         (newLocation) => {
           setLocation(newLocation.coords);
           if (isWalking) { // Send location only if user is walking
-            sendLocationToBackend(newLocation.coords);
+            // sendLocationToBackend(newLocation.coords);
           }
         }
       );
@@ -144,22 +143,24 @@ export default function App() {
       }
 
       const data = await response.json();
-      console.log('Response from backend:', data);
 
-      // Clear the input field and dismiss the keyboard
-      setDestination('');
-      Keyboard.dismiss();
+        // Clear the input field and dismiss the keyboard
+        setDestination('');
+        Keyboard.dismiss();
+        if (data.nearby_crimes){
+          setNearbyCrimes(data.nearby_crimes);
+          console.log('CRIME HERE' + data.nearby_crimes);
+        }
+        if (data.overview_polyline) {
+            const points = decodePolyline(data.overview_polyline);
+            setDirections(points);
 
-      if (data.routes && data.routes.length > 0) {
-        const points = decodePolyline(data.routes[0].overview_polyline.points);
-        setDirections(points);
-
-        const destinationLatLng = {
-          latitude: points[points.length - 1].latitude,
-          longitude: points[points.length - 1].longitude,
-        };
-        setDestinationCoordinates(destinationLatLng);
-        startWalking(); // Set walking to true when a route is started
+            const destinationLatLng = {
+                latitude: data.destination_lat, // Get destination latitude from the response
+                longitude: data.destination_lng, // Get destination longitude from the response
+            };
+            setDestinationCoordinates(destinationLatLng);
+            startWalking(); // Set walking to true when a route is started
       } else {
         Alert.alert('Error', 'Could not retrieve directions.');
       }
@@ -215,6 +216,22 @@ export default function App() {
                 strokeColor="#000"
                 strokeWidth={6}
               />
+            )}
+
+            {/* Render markers for nearby crimes */}
+            {nearbyCrimes.length > 0 && (
+              nearbyCrimes.map((crime, index) => (
+                <Marker
+                  key={index}
+                  coordinate={{
+                    latitude: crime['Latitude'], // Ensure this is the correct property name
+                    longitude: crime['Longitude'], // Ensure this is the correct property name
+                  }}
+                  title={`Crime at ${crime['NearestIntersectionLocation']}`}
+                  description={`Rating: ${crime.rating}\nCrime Rate: ${crime.crime_rate}\nDistance: ${crime.distance.toFixed(2)} meters`}
+                  pinColor="red"
+                />
+              ))
             )}
           </MapView>
         </>

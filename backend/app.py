@@ -1,11 +1,10 @@
-
 from flask import Flask, request, jsonify
 import requests
 import os
 from function import haversine
 from pymongo import MongoClient
 from dotenv import load_dotenv
-from bson.objectid import ObjectId
+import polyline  # Install the polyline package using pip
 
 load_dotenv()
 
@@ -32,14 +31,68 @@ def get_directions():
 
     # Send request to Google Maps Directions API
     response = requests.get(url)
-        
 
     if response.status_code == 200:
         directions_data = response.json()
-        return jsonify(directions_data)
+        # Get the first route
+        route = directions_data.get('routes', [])[0]
+
+        # Get the overview_polyline and destination location
+        overview_polyline = route.get('overview_polyline', {}).get('points')
+        destination_location = route['legs'][0]['end_location']
+        
+        # Fetch nearby crimes along the route
+        nearby_crimes = fetch_nearby_crimes_along_route(overview_polyline)
+
+        return jsonify({
+            'overview_polyline': overview_polyline,
+            'destination_lat': destination_location['lat'],
+            'destination_lng': destination_location['lng'],
+            'nearby_crimes': nearby_crimes
+        })
     else:
         return jsonify({'error': 'Unable to fetch directions'}), 500
+
+
+def fetch_nearby_crimes_along_route(overview_polyline):
+    # Decode the polyline to get a list of points along the route
+    route_points = polyline.decode(overview_polyline)
     
+    nearby_crimes = []
+    detection_radius = 0.1  # 100 m radius
+    unique_crime_ids = set()  # To keep track of unique crime records by ID
+
+    # Check crimes for each point along the route
+    for point in route_points:
+        lat, lng = point
+        
+        # Query MongoDB for crimes within the detection radius
+        for record in crime_collection.find():
+            crime_lat = record['Latitude']
+            crime_lon = record['Longitude']
+            distance = haversine(lat, lng, crime_lat, crime_lon)
+
+            # Check if the crime is within the detection radius
+            if distance < detection_radius:
+                record_id = str(record['_id'])  # Convert ObjectId to string for JSON serialization
+                
+                # Add to unique crimes only if not already included
+                if record_id not in unique_crime_ids:
+                    unique_crime_ids.add(record_id)
+                    crime_info = {
+                        '_id': record_id,
+                        'NearestIntersectionLocation': record.get('NearestIntersectionLocation', 'Unknown'),
+                        'rating': record.get('rating', 'Low'),
+                        'crime_rate': record.get('crime_rate', 0.0),
+                        'Latitude': crime_lat,
+                        'Longitude': crime_lon,
+                        'distance': distance
+                    }
+                    nearby_crimes.append(crime_info)
+
+    return nearby_crimes
+
+
 @app.route('/check_crime', methods=['POST'])
 def check_crime():
     data = request.get_json()

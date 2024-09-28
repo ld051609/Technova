@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, Keyboard, TouchableWithoutFeedback } from 'react-native';
 
 const EmergencyContacts = () => {
   const [phone, setPhone] = useState('');
@@ -32,23 +32,25 @@ const EmergencyContacts = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Emergency Contacts</Text>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={styles.container}>
+        <Text style={styles.title}>Emergency Contacts</Text>
 
-      <TextInput
-        placeholder="Enter phone number"
-        value={phone}
-        onChangeText={setPhone}
-        keyboardType="phone-pad"
-        style={styles.input}
-        placeholderTextColor="grey"  // Set placeholder color to black
+        <TextInput
+          placeholder="Enter phone number"
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
+          style={styles.input}
+          placeholderTextColor="grey"  // Set placeholder color to black
 
-      />
+        />
 
-      <TouchableOpacity style={styles.button} onPress={handleAddContact}>
-        <Text style={styles.buttonText}>Add Contact</Text>
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity style={styles.button} onPress={handleAddContact}>
+          <Text style={styles.buttonText}>Add Contact</Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 

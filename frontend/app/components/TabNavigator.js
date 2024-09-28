@@ -2,7 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Form from '../tabs/Form';
 import Map from '../tabs/Maps';
-import Contact from './tabs/Contact';
+import Contact from '../tabs/Contact';
 import { MaterialIcons } from '@expo/vector-icons';
 
 const Tab = createBottomTabNavigator();

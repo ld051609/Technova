@@ -5,6 +5,7 @@ from function import haversine
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import polyline  # Install the polyline package using pip
+from twilio.rest import Client
 
 load_dotenv()
 
@@ -93,6 +94,8 @@ def fetch_nearby_crimes_along_route(overview_polyline):
     return nearby_crimes
 
 
+    
+
 @app.route('/check_crime', methods=['POST'])
 def check_crime():
     data = request.get_json()
@@ -148,6 +151,46 @@ def check_crime():
         })
     
     return jsonify({'status': 'safe'})
+
+
+# Twilio configuration
+account_sid = os.getenv("TWILIO_ACCOUNT_SID")  
+auth_token = os.getenv("TWILIO_AUTH_TOKEN")    
+twilio_phone_number = os.getenv("TWILIO_PHONE_NUMBER") 
+
+client = Client(account_sid, auth_token)
+
+@app.route('/share_location', methods=['POST'])
+def share_location():
+    try:
+        # Extract latitude and longitude from the request
+        data = request.json
+        latitude = data.get('latitude')
+        longitude = data.get('longitude')
+
+        # List of emergency contacts
+        emergency_contacts = ['+16477653730', '+0987654321']  
+        
+        if not latitude or not longitude:
+            return jsonify({"error": "Latitude and Longitude are required"}), 400
+
+        # Message to send
+        message_body = f"Emergency! User is located at: https://maps.google.com/?q={latitude},{longitude}"
+
+        # Send the message to all emergency contacts
+        for contact in emergency_contacts:
+            message = client.messages.create(
+                body=message_body,
+                from_=twilio_phone_number,
+                to=contact
+            )
+
+        return jsonify({"message": "Location shared successfully!"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 
 
 if __name__ == '__main__':

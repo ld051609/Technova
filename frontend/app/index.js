@@ -1,42 +1,30 @@
-import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { StyleSheet, Text, View } from 'react-native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { MaterialIcons } from '@expo/vector-icons'; // Import icons
-import Form from './tabs/Form';
-import Map from './tabs/Maps';
-import Contact from './tabs/Contact';
-const Tab = createBottomTabNavigator();
+import LoginPage from './components/LoginPage/Login';
+import { onAuthStateChanged } from 'firebase/auth';
+import { useEffect, useState } from 'react';
+import { FIREBASE_AUTH } from '../configs/firebaseConfig';
+import TabNavigator from './components/TabNavigator';
+
+const Stack = createNativeStackNavigator();
 
 export default function App() {
-  return(
-      <Tab.Navigator>
-        <Tab.Screen name="Maps" component={Map} 
-        options={{
-          headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="home" size={size} color={color} />
-          ),
-        }} 
-        />
-        <Tab.Screen name="Form" component={Form} 
-        options={{
-          headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="description" size={size} color={color} />
-          ),
-        }} 
-        />
-        <Tab.Screen name="Contact" component={Contact} 
-        options={{
-          headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="contact-mail" size={size} color={color} />
-          ),
-        }} 
-        />
-      </Tab.Navigator>
-      
-  );
+  const [user, setUser] = useState(null);
 
-};
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, (user) => {
+      setUser(user);
+    });
+    
+    return () => unsubscribe();
+  }, []);
+
+  return (
+    <Stack.Navigator initialRouteName="Login">
+      {user ? (
+        <Stack.Screen name="Home" component={TabNavigator} options={{ headerShown: false }} />
+      ) : (
+        <Stack.Screen name="Login" component={LoginPage} options={{ headerShown: false }} />
+      )}
+    </Stack.Navigator>
+  );
+}

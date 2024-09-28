@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialIcons } from '@expo/vector-icons'; // Import icons
 import Form from './tabs/Form';
 import Map from './tabs/Maps';
+import Contact from './tabs/Contact';
 const Tab = createBottomTabNavigator();
 
 export default function App() {
@@ -23,6 +24,14 @@ export default function App() {
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="description" size={size} color={color} />
+          ),
+        }} 
+        />
+        <Tab.Screen name="Contact" component={Contact} 
+        options={{
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="contact-mail" size={size} color={color} />
           ),
         }} 
         />

@@ -17,7 +17,7 @@ const LoginPage = () => {
         try {
             const res = await signInWithEmailAndPassword(auth, email, password);
         } catch (error) {
-            console.log(error);
+            alert('sign in failed: ' + error.message);
         } finally {
             setLoading(false);
         }
@@ -58,6 +58,7 @@ const LoginPage = () => {
                             <AuthButton
                                 signIn={signIn}
                                 signUp={signUp}
+
                             />
                         )}
                     </KeyboardAvoidingView>

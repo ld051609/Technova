@@ -1,4 +1,4 @@
-import { View, TextInput, StyleSheet, TouchableOpacity, Text, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, StyleSheet, Text, TouchableWithoutFeedback, Keyboard, StatusBar} from 'react-native';
 import React, { useState } from 'react';
 import { FIREBASE_AUTH } from '../../../configs/firebaseConfig';
 import { ActivityIndicator, KeyboardAvoidingView } from 'react-native';
@@ -15,7 +15,7 @@ const LoginPage = () => {
     const signIn = async () => {
         setLoading(true);
         try {
-            const res = await signInWithEmailAndPassword(auth, email, password);
+            await signInWithEmailAndPassword(auth, email, password);
         } catch (error) {
             alert('sign in failed: ' + error.message);
         } finally {
@@ -26,7 +26,7 @@ const LoginPage = () => {
     const signUp = async () => {
         setLoading(true);
         try {
-            const res = await createUserWithEmailAndPassword(auth, email, password);
+            await createUserWithEmailAndPassword(auth, email, password);
         } catch (error) {
             alert('sign up failed: ' + error.message);
         } finally {
@@ -37,6 +37,7 @@ const LoginPage = () => {
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={styles.outerContainer}>
+                <StatusBar barStyle="default" />
                 <Text style={styles.programNameText}>Program Name</Text>
                 <View style={styles.innerContainer}>
                     <KeyboardAvoidingView behavior='padding'>
@@ -53,7 +54,7 @@ const LoginPage = () => {
                         />
 
                         {loading ? (
-                            <ActivityIndicator size="large" color="#0000ff" />
+                            <ActivityIndicator size="medium" color="#0000ff" />
                         ) : (
                             <AuthButton
                                 signIn={signIn}

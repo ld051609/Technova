@@ -65,7 +65,8 @@ const Form = () => {
                         onChangeText={setDescription}
                         style={styles.input}
                         multiline
-                        placeholderTextColor="#808183" 
+                        placeholderTextColor="grey"  // Set placeholder color to black
+
                     />
                 </View>
                 
@@ -129,7 +130,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
     },
     buttonText: {
-        color: '#fff',
+        color: 'white',
         fontSize: 18,
         fontWeight: '600',
     },

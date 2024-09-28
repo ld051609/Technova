@@ -14,7 +14,7 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, (user) => {
       setUser(user);
     });
-
+    
     return () => unsubscribe();
   }, []);
 

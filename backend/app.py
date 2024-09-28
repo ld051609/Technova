@@ -1,48 +1,93 @@
-import os
-import requests
-from dotenv import load_dotenv
 from flask import Flask, request, jsonify
+import requests
+import os
+from function import haversine
+from pymongo import MongoClient
+from dotenv import load_dotenv
+from bson.objectid import ObjectId
 
 load_dotenv()
 
 app = Flask(__name__)
 
-def get_directions(origin_lat, origin_lng, destination):
-    directions_url = "https://maps.googleapis.com/maps/api/directions/json"
-    api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+# Connect to MongoDB
+MONGO_URI = os.getenv('MONGO_URI')
+client = MongoClient(MONGO_URI)  
+db = client.crime_data
+crime_collection = db.crimes
 
-    params = {
-        "origin": f"{origin_lat},{origin_lng}",
-        "destination": destination,
-        "key": api_key
-    }
-
-    response = requests.get(directions_url, params=params)
-    if response.status_code == 200:
-        data = response.json()
-        if data['routes']:
-            return data['routes'][0]
-        else:
-            return None
-    else:
-        print(f"Error: {response.status_code}")
-        return None
+# Replace this with your actual Google Maps API key
+GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY')
 
 @app.route('/get_directions', methods=['POST'])
-def get_route():
+def get_directions():
     data = request.get_json()
-    origin_lat = data.get('origin_lat') 
+    origin_lat = data.get('origin_lat')
     origin_lng = data.get('origin_lng')
     destination = data.get('destination')
 
-    if origin_lat is None or origin_lng is None or not destination:
-        return jsonify({"error": "Please provide origin latitude, origin longitude, and destination."}), 400
+    # Construct the Google Maps Directions API URL
+    url = f"https://maps.googleapis.com/maps/api/directions/json?origin={origin_lat},{origin_lng}&destination={destination}&key={GOOGLE_MAPS_API_KEY}"
 
-    directions = get_directions(origin_lat, origin_lng, destination)
-    if directions:
-        return jsonify(directions), 200
+    # Send request to Google Maps Directions API
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        directions_data = response.json()
+        return jsonify(directions_data)
     else:
-        return jsonify({"error": "Could not retrieve directions."}), 500
+        return jsonify({'error': 'Unable to fetch directions'}), 500
+    
+@app.route('/check_crime', methods=['POST'])
+def check_crime():
+    data = request.get_json()
+    user_lat = data.get('latitude')
+    user_lon = data.get('longitude')
+    detection_radius = 1.0  # 1 km radius
+
+    if user_lat is None or user_lon is None:
+        return jsonify({"error": "Invalid input"}), 400
+
+    # Query MongoDB for intersections within the detection radius
+    nearby_crimes = []
+    for record in crime_collection.find():
+        crime_lat = record['Latitude']
+        crime_lon = record['Longitude']
+        distance = haversine(user_lat, user_lon, crime_lat, crime_lon)
+        
+        if distance < detection_radius:
+            # Check the crime rating
+            crime_rating = record.get('rating', 'Low')  # Default to 'Low' if not specified
+
+            # Add the record only if the rating is 'Moderate' or 'High'
+            if crime_rating in ['Moderate', 'High']:
+                # Convert ObjectId to string for JSON serialization
+                record['_id'] = str(record['_id'])
+                
+                # Add the relevant crime data (including street/intersection and rating)
+                crime_info = {
+                    '_id': record['_id'],
+                    'NearestIntersectionLocation': record.get('NearestIntersectionLocation', 'Unknown'),
+                    'rating': crime_rating,
+                    'crime_rate': record.get('crime_rate', 0.0),
+                    'Latitude': record['Latitude'],
+                    'Longitude': record['Longitude'],
+                    'distance': distance
+                }
+
+                nearby_crimes.append(crime_info)
+
+    # Respond with detailed nearby crime data
+    if nearby_crimes:
+        return jsonify({
+            'status': 'danger',
+            'nearby_crimes': nearby_crimes
+        })
+    
+    return jsonify({'status': 'safe'})
+
+    
+
 
 if __name__ == '__main__':
     app.run(debug=True)

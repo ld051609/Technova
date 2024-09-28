@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, TextInput, Button, Alert, ActivityIndicator, Keyboard } from 'react-native';
+import { StyleSheet, View, TextInput, Button, Alert, ActivityIndicator, Keyboard, TouchableWithoutFeedback, StatusBar } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import decodePolyline from '../utils/decodePolyline'
@@ -189,60 +189,63 @@ export default function Map() {
   };
 
   return (
-    <View style={styles.container}>
-      {loading ? (
-        <ActivityIndicator size="large" color="#0000ff" style={styles.loadingIndicator} />
-      ) : (
-        <>
-          <View style={styles.searchContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your destination"
-              onChangeText={setDestination}
-              placeholderTextColor="gray"
-              value={destination}
-            />
-            <Button title="Search" onPress={handleSendDestination} />
-          </View>
-          <MapView
-            style={styles.map}
-            initialRegion={{
-              latitude: location?.latitude || 37.78825,
-              longitude: location?.longitude || -122.4324,
-              latitudeDelta: 0.0922,
-              longitudeDelta: 0.0421,
-            }}
-            showsUserLocation={true}
-            followsUserLocation={true}
-          >
-            {location && (
-              <Marker coordinate={location} title="You are here" />
-            )}
-            {destinationCoordinates && (
-              <Marker coordinate={destinationCoordinates} title="Destination" pinColor="blue" />
-            )}
-            {directions.length > 0 && (
-              <Polyline coordinates={directions} strokeColor="#000" strokeWidth={6} />
-            )}
-            {nearbyCrimes.length > 0 && nearbyCrimes.map((crime, index) => (
-              <Marker
-                key={index}
-                coordinate={{
-                  latitude: crime['Latitude'],
-                  longitude: crime['Longitude'],
-                }}
-                title={`Crime at ${crime['NearestIntersectionLocation']}`}
-                description={`Rating: ${crime.rating}\nCrime Rate: ${crime.crime_rate}\nDistance: ${crime.distance.toFixed(2)} meters`}
-                pinColor="red"
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.container}>
+        <StatusBar barStyle="default" />
+        {loading ? (
+          <ActivityIndicator size="large" color="#0000ff" style={styles.loadingIndicator} />
+        ) : (
+          <>
+            <View style={styles.searchContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your destination"
+                onChangeText={setDestination}
+                placeholderTextColor="gray"
+                value={destination}
               />
-            ))}
-          </MapView>
-          {loadingDirections && (
-            <ActivityIndicator size="large" color="#0000ff" style={styles.loadingIndicator} />
-          )}
-        </>
-      )}
-    </View>
+              <Button title="Search" onPress={handleSendDestination} />
+            </View>
+            <MapView
+              style={styles.map}
+              initialRegion={{
+                latitude: location?.latitude || 37.78825,
+                longitude: location?.longitude || -122.4324,
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421,
+              }}
+              showsUserLocation={true}
+              followsUserLocation={true}
+            >
+              {location && (
+                <Marker coordinate={location} title="You are here" />
+              )}
+              {destinationCoordinates && (
+                <Marker coordinate={destinationCoordinates} title="Destination" pinColor="blue" />
+              )}
+              {directions.length > 0 && (
+                <Polyline coordinates={directions} strokeColor="#000" strokeWidth={6} />
+              )}
+              {nearbyCrimes.length > 0 && nearbyCrimes.map((crime, index) => (
+                <Marker
+                  key={index}
+                  coordinate={{
+                    latitude: crime['Latitude'],
+                    longitude: crime['Longitude'],
+                  }}
+                  title={`Crime at ${crime['NearestIntersectionLocation']}`}
+                  description={`Rating: ${crime.rating}\nCrime Rate: ${crime.crime_rate}\nDistance: ${crime.distance.toFixed(2)} meters`}
+                  pinColor="red"
+                />
+              ))}
+            </MapView>
+            {loadingDirections && (
+              <ActivityIndicator size="large" color="#0000ff" style={styles.loadingIndicator} />
+            )}
+          </>
+        )}
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 

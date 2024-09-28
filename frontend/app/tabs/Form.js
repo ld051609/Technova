@@ -1,6 +1,6 @@
-import { Alert, SafeAreaView, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet, View, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { Alert, SafeAreaView, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet, View, Keyboard, TouchableWithoutFeedback, StatusBar } from 'react-native';
 import React, { useState, useEffect } from 'react';
-import * as Location from 'expo-location'; // To fetch user location (Expo package)
+import * as Location from 'expo-location';
 
 const Form = () => {
     const [description, setDescription] = useState('');
@@ -48,13 +48,14 @@ const Form = () => {
             console.error(error);
             Alert.alert("An error occurred during submission.");
         } finally {
-            setLoading(false); // Hide loading indicator
+            setLoading(false);
         }
     };
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
             <SafeAreaView style={styles.container}>
+                <StatusBar barStyle="default" />
                 <Text style={styles.heading}>Report an Incident</Text>
 
                 <View style={styles.formGroup}>
@@ -64,7 +65,7 @@ const Form = () => {
                         onChangeText={setDescription}
                         style={styles.input}
                         multiline
-                        placeholderTextColor="#000"  // Set placeholder color to black
+                        placeholderTextColor="#808183" 
                     />
                 </View>
                 

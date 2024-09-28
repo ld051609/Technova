@@ -93,9 +93,6 @@ def fetch_nearby_crimes_along_route(overview_polyline):
 
     return nearby_crimes
 
-
-    
-
 @app.route('/check_crime', methods=['POST'])
 def check_crime():
     data = request.get_json()
@@ -164,13 +161,13 @@ client = Client(account_sid, auth_token)
 def share_location():
     try:
         # Extract latitude and longitude from the request
-        data = request.json
+        data = request.get_json()
         latitude = data.get('latitude')
         longitude = data.get('longitude')
 
         # List of emergency contacts
         emergency_contacts = ['+16477653730', '+0987654321']  
-        
+
         if not latitude or not longitude:
             return jsonify({"error": "Latitude and Longitude are required"}), 400
 
@@ -190,8 +187,53 @@ def share_location():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+def get_address_from_coords(lat, lon):
+    try:
+        url = f'https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lon}&key={GOOGLE_MAPS_API_KEY}'
+        response = requests.get(url)
+        data = response.json()
+        if data['status'] == 'OK':
+            # Extract the formatted address from the response
+            return data['results'][0]['formatted_address']
+        else:
+            return None
+    except Exception as e:
+        print(f"Error fetching address: {e}")
+        return None
 
+@app.route('/form', methods=['POST'])
+def submit_form():
+    try:
+        # Get data from request
+        data = request.get_json()
+        lat = data.get('latitude')
+        lon = data.get('longitude')
+        crime = data.get('crime')
 
+        if not lat or not lon or not crime:
+            return jsonify({"error": "Missing required data"}), 400
+        
+        # Get address from coordinates
+        address = get_address_from_coords(lat, lon)
+        if not address:
+            return jsonify({"error": "Could not retrieve address from coordinates"}), 400
+
+        # Prepare document for MongoDB
+        report = {
+            "latitude": lat,
+            "longitude": lon,
+            "crime": crime,
+            "address": address
+        }
+
+        # Insert into MongoDB
+        crime_collection.insert_one(report)  # Corrected to use crime_collection
+
+        return jsonify({"message": "Form is submitted and data is stored!"}), 200
+
+    except Exception as e:
+        print(e)
+        return jsonify({"error": "An error occurred during form submission."}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

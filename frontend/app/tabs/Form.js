@@ -60,16 +60,16 @@ const Form = () => {
 
                 <View style={styles.formGroup}>
                     <TextInput
-                        placeholder='Describe the incident'
+                        placeholder='Please describe the incident in detail, including what happened and any relevant information (e.g., time, location, people involved)...'
                         value={description}
                         onChangeText={setDescription}
                         style={styles.input}
                         multiline
                         placeholderTextColor="grey"  // Set placeholder color to black
-
                     />
+                    <Text style={styles.charCount}>{description.length}/500</Text>
                 </View>
-                
+
                 <TouchableOpacity 
                     onPress={handleSubmit} 
                     style={[styles.button, loading && styles.disabledButton]} 
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: 20,
-        justifyContent: 'center', 
+        justifyContent: 'center',
         margin: 30
     },
     heading: {
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     input: {
-        height: 120,
+        height: 300,
         borderColor: '#adb5bd',
         borderWidth: 1,
         borderRadius: 10,
@@ -118,6 +118,12 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
         shadowOffset: { width: 0, height: 1 },
     },
+    charCount: {
+        textAlign: 'right', 
+        fontSize: 14,
+        color: '#6c757d',
+        marginTop: 5,
+    },
     button: {
         backgroundColor: '#007bff',
         paddingVertical: 15,
@@ -125,7 +131,7 @@ const styles = StyleSheet.create({
         borderRadius: 30,
         alignItems: 'center',
         shadowColor: '#000',
-        shadowOpacity: 0.2,
+        shadowOpacity: 0.4,
         shadowRadius: 5,
         shadowOffset: { width: 0, height: 2 },
     },
@@ -135,7 +141,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     disabledButton: {
-        backgroundColor: '#6c757d', // Disable button color when loading
+        backgroundColor: '#6c757d',
     },
 });
 

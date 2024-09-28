@@ -1,5 +1,5 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import LoginPage from './components/Login';
+import LoginPage from './components/LoginPage/Login';
 import MainPage from './components/MainPage';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useEffect, useState } from 'react';

@@ -3,6 +3,7 @@ import { StyleSheet, View, TextInput, Button, Alert, ActivityIndicator, Dimensio
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 
+
 const MainPage = () => {
   const [location, setLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);

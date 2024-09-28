@@ -1,7 +1,7 @@
 import { View, Button, TextInput, StyleSheet } from 'react-native';
 import React, { useState } from 'react';
 import { FIREBASE_AUTH } from '../../configs/firebaseConfig';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView  } from 'react-native';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 
 const LoginPage = () => {
@@ -41,32 +41,34 @@ const LoginPage = () => {
 
     return (
         <View style={styles.container}>
-            <TextInput 
-                value={email}
-                style={styles.input} 
-                placeholder='Email'
-                placeholderTextColor={'gray'}
-                autoCapitalize='none'
-                onChangeText={(text) => setEmail(text)}
-            />
-            <TextInput 
-                value={password}
-                style={styles.input} 
-                secureTextEntry={true}
-                placeholder='Password' 
-                placeholderTextColor={'gray'}
-                autoCapitalize='none'
-                onChangeText={(text) => setPassword(text)}
-            />
+            <KeyboardAvoidingView behavior='padding'>
+                <TextInput 
+                    value={email}
+                    style={styles.input} 
+                    placeholder='Email'
+                    placeholderTextColor={'gray'}
+                    autoCapitalize='none'
+                    onChangeText={(text) => setEmail(text)}
+                />
+                <TextInput 
+                    value={password}
+                    style={styles.input} 
+                    secureTextEntry={true}
+                    placeholder='Password' 
+                    placeholderTextColor={'gray'}
+                    autoCapitalize='none'
+                    onChangeText={(text) => setPassword(text)}
+                />
 
-            {loading ? (
-                <ActivityIndicator size="large" color="#0000ff" /> // 색상 코드 수정
-            ) : (
-                <>
-                    <Button title="Login" onPress={signIn} /> 
-                    <Button title="Create account" onPress={signUp} /> 
-                </>
-            )}
+                {loading ? (
+                    <ActivityIndicator size="large" color="#0000ff" /> // 색상 코드 수정
+                ) : (
+                    <>
+                        <Button title="Login" onPress={signIn} /> 
+                        <Button title="Create account" onPress={signUp} /> 
+                    </>
+                )}
+            </KeyboardAvoidingView>
         </View>
     );
 };

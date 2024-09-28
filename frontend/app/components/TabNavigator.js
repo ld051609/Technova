@@ -29,6 +29,14 @@ export default function TabNavigator() {
           ),
         }} 
       />
+       <Tab.Screen name="Contact" component={Contact} 
+        options={{
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="contact-mail" size={size} color={color} />
+          ),
+        }} 
+        />
     </Tab.Navigator>
   );
 }

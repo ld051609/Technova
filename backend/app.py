@@ -1,3 +1,4 @@
+
 from flask import Flask, request, jsonify
 import requests
 import os
@@ -31,6 +32,7 @@ def get_directions():
 
     # Send request to Google Maps Directions API
     response = requests.get(url)
+        
 
     if response.status_code == 200:
         directions_data = response.json()
@@ -43,13 +45,15 @@ def check_crime():
     data = request.get_json()
     user_lat = data.get('latitude')
     user_lon = data.get('longitude')
-    detection_radius = 1.0  # 1 km radius
+    detection_radius = 0.5  # 500 m radius
 
     if user_lat is None or user_lon is None:
         return jsonify({"error": "Invalid input"}), 400
 
     # Query MongoDB for intersections within the detection radius
     nearby_crimes = []
+    unique_crime_locations = set()  # To track unique crime records by NearestIntersectionLocation
+
     for record in crime_collection.find():
         crime_lat = record['Latitude']
         crime_lon = record['Longitude']
@@ -61,21 +65,27 @@ def check_crime():
 
             # Add the record only if the rating is 'Moderate' or 'High'
             if crime_rating in ['Moderate', 'High']:
-                # Convert ObjectId to string for JSON serialization
-                record['_id'] = str(record['_id'])
-                
-                # Add the relevant crime data (including street/intersection and rating)
-                crime_info = {
-                    '_id': record['_id'],
-                    'NearestIntersectionLocation': record.get('NearestIntersectionLocation', 'Unknown'),
-                    'rating': crime_rating,
-                    'crime_rate': record.get('crime_rate', 0.0),
-                    'Latitude': record['Latitude'],
-                    'Longitude': record['Longitude'],
-                    'distance': distance
-                }
+                # Get the NearestIntersectionLocation
+                intersection_location = record.get('NearestIntersectionLocation', 'Unknown')
 
-                nearby_crimes.append(crime_info)
+                # Check if this intersection location has already been added
+                if intersection_location not in unique_crime_locations:
+                    unique_crime_locations.add(intersection_location)  # Add to unique set
+                    
+                    # Convert ObjectId to string for JSON serialization
+                    record_id = str(record['_id'])
+                    
+                    # Add the relevant crime data (including street/intersection and rating)
+                    crime_info = {
+                        '_id': record_id,
+                        'NearestIntersectionLocation': intersection_location,
+                        'rating': crime_rating,
+                        'crime_rate': record.get('crime_rate', 0.0),
+                        'Latitude': crime_lat,
+                        'Longitude': crime_lon,
+                        'distance': distance
+                    }
+                    nearby_crimes.append(crime_info)
 
     # Respond with detailed nearby crime data
     if nearby_crimes:
@@ -85,8 +95,6 @@ def check_crime():
         })
     
     return jsonify({'status': 'safe'})
-
-    
 
 
 if __name__ == '__main__':

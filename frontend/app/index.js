@@ -11,6 +11,7 @@ export default function App() {
   const [directions, setDirections] = useState([]);
   const [destinationCoordinates, setDestinationCoordinates] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isWalking, setIsWalking] = useState(false); // New state to track walking status
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -34,15 +35,17 @@ export default function App() {
         setLoading(false);
       }
 
-      // Watch location changes
+      // Watch location changes only if user is walking
       const subscription = Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
-          distanceInterval: 1,
+          distanceInterval: 20,
         },
         (newLocation) => {
           setLocation(newLocation.coords);
-          sendLocationToBackend(newLocation.coords); // Pass new coordinates
+          if (isWalking) { // Send location only if user is walking
+            sendLocationToBackend(newLocation.coords);
+          }
         }
       );
 
@@ -52,35 +55,60 @@ export default function App() {
     };
 
     fetchLocation();
-  }, []);
+  }, [isWalking]); // Depend on isWalking
+
+  // Function to start walking (triggered when user starts navigating)
+  const startWalking = () => {
+    setIsWalking(true);
+  };
+
+  // Function to stop walking (when the route is completed or user stops)
+  const stopWalking = () => {
+    setIsWalking(false);
+  };
 
   // Send location to backend to check for nearby crime areas
-  const sendLocationToBackend = async () => {
+  const sendLocationToBackend = async (coords) => {
+    if (!coords) {
+      console.log('No location data');
+      return;
+    }
+  
     try {
-      if (!location) {
-        console.log('No location data');
-        return;
-      }
       const response = await fetch('https://9de8-129-97-124-137.ngrok-free.app/check_crime', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          latitude: location.latitude,
-          longitude: location.longitude,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
         }),
       });
   
       const data = await response.json();
-      if (data.status === 'danger') {
-        const crimeDetails = data.nearby_crimes
-          .map(crime => `${crime.NearestIntersectionLocation} (${crime.rating}) - ${crime.distance.toFixed(2)} km away`)
-          .join('\n');
   
-        Alert.alert('Warning', `You are near crime areas:\n${crimeDetails}`, [
-          { text: 'OK', onPress: () => console.log(data.nearby_crimes) },
+      // Trigger alert only when walking and there's danger
+      if (isWalking && data.status === 'danger' && data.nearby_crimes && data.nearby_crimes.length > 0) {
+        const crimeDetails = data.nearby_crimes.map(crime => 
+          `Location: ${crime.NearestIntersectionLocation}\n` +
+          `Rating: ${crime.rating}\n` +
+          `Crime Rate: ${crime.crime_rate}\n` +
+          `Distance: ${crime.distance.toFixed(2)} meters`
+        ).join('\n\n');
+  
+        // Show alert with detailed crime information
+        Alert.alert('Warning', 'You are near a crime area!\n\n' + crimeDetails, [
+          {
+            text: 'View Details',
+            onPress: () => console.log(crimeDetails),
+          },
+          { text: 'OK' },
         ]);
+      }
+      // If the status is safe, log this or handle it in some way
+      else if (data.status === 'safe') {
+        console.log('You are in a safe area.');
       }
     } catch (error) {
       console.error('Error sending location:', error);
@@ -120,7 +148,7 @@ export default function App() {
 
       // Clear the input field and dismiss the keyboard
       setDestination('');
-      Keyboard.dismiss(); 
+      Keyboard.dismiss();
 
       if (data.routes && data.routes.length > 0) {
         const points = decodePolyline(data.routes[0].overview_polyline.points);
@@ -131,6 +159,7 @@ export default function App() {
           longitude: points[points.length - 1].longitude,
         };
         setDestinationCoordinates(destinationLatLng);
+        startWalking(); // Set walking to true when a route is started
       } else {
         Alert.alert('Error', 'Could not retrieve directions.');
       }

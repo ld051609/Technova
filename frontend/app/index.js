@@ -14,6 +14,7 @@ export default function App() {
   const [isWalking, setIsWalking] = useState(false);
   const [nearbyCrimes, setNearbyCrimes] = useState([]);
   const [loadingDirections, setLoadingDirections] = useState(false);
+  const [alertedCrimes, setAlertedCrimes] = useState(new Set()); // State for tracking alerted crimes
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -73,23 +74,62 @@ export default function App() {
 
       const data = await response.json();
       if (isWalking && data.status === 'danger' && data.nearby_crimes && data.nearby_crimes.length > 0) {
-        const crimeDetails = data.nearby_crimes.map(crime =>
-          `Location: ${crime.NearestIntersectionLocation}\n` +
-          `Rating: ${crime.rating}\n` +
-          `Crime Rate: ${crime.crime_rate}\n` +
-          `Distance: ${crime.distance.toFixed(2)} meters`
-        ).join('\n\n');
-
-        Alert.alert('Warning', 'You are near a crime area!\n\n' + crimeDetails, [
-          { text: 'View Details', onPress: () => console.log(crimeDetails) },
-          { text: 'OK' },
-        ]);
+        // Start showing crime alerts
+        showCrimeAlert(0, data.nearby_crimes); // Start from the first crime
       } else if (data.status === 'safe') {
         console.log('You are in a safe area.');
       }
     } catch (error) {
       console.error('Error sending location:', error);
     }
+  };
+
+  const showCrimeAlert = (index, crimes) => {
+    if (index >= crimes.length) return; // Exit if no more crimes to show
+
+    const crime = crimes[index];
+    // Check if this crime has already been alerted
+    if (alertedCrimes.has(crime.id)) { // Assuming each crime has a unique 'id' property
+      showCrimeAlert(index + 1, crimes); // Show next crime alert
+      return;
+    }
+
+    const crimeDetails = 
+      `Location: ${crime.NearestIntersectionLocation}\n` +
+      `Rating: ${crime.rating}\n` +
+      `Crime Rate: ${crime.crime_rate}\n` +
+      `Distance: ${crime.distance.toFixed(2)} meters`;
+
+    Alert.alert(
+      'Warning',
+      `You are near a high crime area!\n\n${crimeDetails}`,
+      [
+        { 
+          text: 'Continue', 
+          onPress: () => {
+            setAlertedCrimes(prev => new Set(prev).add(crime.id)); // Add this crime to alerted set
+            showCrimeAlert(index + 1, crimes); // Show next crime alert
+          },
+          text: 'Share Location',
+          onPress: () => {
+            if (location){
+              const data = fetch('https://ffba-129-97-124-137.ngrok-free.app/share_location', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ latitude: location.latitude, longitude: location.longitude }),
+              });
+              if (data.ok) {
+                Alert.alert('Success', 'Location shared successfully!');
+              } else {
+                Alert.alert('Error', 'Failed to share location.');
+              }
+            }
+          },
+          
+
+        },
+      ],
+    );
   };
 
   const handleSendDestination = async () => {
@@ -126,7 +166,6 @@ export default function App() {
 
       if (data.nearby_crimes) {
         setNearbyCrimes(data.nearby_crimes);
-        console.log('Nearby Crimes:', data.nearby_crimes);
       }
 
       if (data.overview_polyline) {
@@ -233,16 +272,19 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     borderRadius: 20,
-    padding: 5,
+    padding: 10,
     fontSize: 16,
-    paddingHorizontal: 10,
+    borderColor: '#ccc',
+    marginRight: 5,
   },
   map: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
   },
   loadingIndicator: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginLeft: -20,
+    marginTop: -20,
   },
 });

@@ -18,10 +18,8 @@ const LoginPage = () => {
         try {
             const res = await signInWithEmailAndPassword(auth, email, password);
             console.log(res);
-            alert('check email!');
         } catch (error) {
             console.log(error);
-            alert('sign in failed: ' + error.message);
         } finally {
             setLoading(false);
         }

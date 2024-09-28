@@ -1,9 +1,8 @@
-
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, TextInput, Button, Alert, ActivityIndicator, Keyboard } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
-import decodePolyline from '../component/decodePolyline';
+import decodePolyline from './decodePolyline';
 
 export default function App() {
   const [location, setLocation] = useState(null);

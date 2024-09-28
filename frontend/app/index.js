@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, TextInput, Button, Alert, ActivityIndicator, Keyboard } from 'react-native';
+
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import decodePolyline from '../component/decodePolyline';
@@ -13,6 +14,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [isWalking, setIsWalking] = useState(false); // New state to track walking status
   const [nearbyCrimes, setNearbyCrimes] = useState([]);
+
   useEffect(() => {
     const fetchLocation = async () => {
       // Request location permission
@@ -180,9 +182,11 @@ export default function App() {
             style={styles.input}
             placeholder="Enter your destination"
             onChangeText={destination => setDestination(destination)}
+            placeholderTextColor="gray"
             value={destination}
           />
-          <Button title="Send Destination" onPress={handleSendDestination} />
+          <Button title="Search" style={styles.button} onPress={handleSendDestination} />
+
           <MapView
             style={styles.map}
             initialRegion={{
@@ -237,27 +241,65 @@ export default function App() {
         </>
       )}
     </View>
-  );
-}
+  )
+};
+  
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    searchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      margin: 5,
+      paddingHorizontal: 10,
+      backgroundColor: '#F5F5F5',
+      position: 'absolute', // Position search input absolutely
+      top: 10, // Distance from the top
+      left: 10,
+      right: 10,
+      zIndex: 1, 
+      padding: 5,
+      borderRadius: 30,
+      shadowColor: '#000',
+      shadowOffset: {width: 0, height: 2},
+      shadowOpacity: 0.5,
+      shadowRadius: 2,
+      elevation: 3, // Shadow effect for better visibility
+    },
+    input: {
+      flex: 1,
+      borderRadius: 5,
+      padding: 5,
+      fontSize: 16,
+      paddingHorizontal: 10,
+      marginRight: 10,
+      borderColor: 'gray',
+      placeholderTextColor: 'gray', // Make sure the placeholder is visible
+    
+    },
+    button: {
+      marginLeft: 5,
+      backgroundColor: '#4285F4',
+      borderRadius: 20,
+      padding: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  input: {
-    height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    margin: 10,
-    borderRadius: 5,
-  },
-  map: {
-    flex: 1,
-  },
-  loadingIndicator: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
+    },
+    map: {
+      ...StyleSheet.absoluteFillObject,
+      width: '100%',
+      height: '80%',
+      marginTop: 90,
+  
+    },
+    loadingIndicator: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+  })
+
+  

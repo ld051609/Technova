@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, TextInput, Button, Alert, ActivityIndicator, Keyboard } from 'react-native';
-
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import decodePolyline from '../component/decodePolyline';
@@ -12,12 +11,13 @@ export default function App() {
   const [directions, setDirections] = useState([]);
   const [destinationCoordinates, setDestinationCoordinates] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isWalking, setIsWalking] = useState(false); // New state to track walking status
+  const [isWalking, setIsWalking] = useState(false);
   const [nearbyCrimes, setNearbyCrimes] = useState([]);
+  const [loadingDirections, setLoadingDirections] = useState(false);
+  const [alertedCrimes, setAlertedCrimes] = useState(new Set()); // State for tracking alerted crimes
 
   useEffect(() => {
     const fetchLocation = async () => {
-      // Request location permission
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setErrorMsg('Permission to access location was denied');
@@ -25,7 +25,6 @@ export default function App() {
         return;
       }
 
-      // Get current location
       try {
         let currentLocation = await Location.getCurrentPositionAsync({});
         setLocation(currentLocation.coords);
@@ -36,7 +35,6 @@ export default function App() {
         setLoading(false);
       }
 
-      // Watch location changes only if user is walking
       const subscription = Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
@@ -44,8 +42,8 @@ export default function App() {
         },
         (newLocation) => {
           setLocation(newLocation.coords);
-          if (isWalking) { // Send location only if user is walking
-            // sendLocationToBackend(newLocation.coords);
+          if (isWalking) {
+            sendLocationToBackend(newLocation.coords);
           }
         }
       );
@@ -56,83 +54,101 @@ export default function App() {
     };
 
     fetchLocation();
-  }, [isWalking]); // Depend on isWalking
+  }, [isWalking]);
 
-  // Function to start walking (triggered when user starts navigating)
-  const startWalking = () => {
-    setIsWalking(true);
-  };
+  const startWalking = () => setIsWalking(true);
+  const stopWalking = () => setIsWalking(false);
 
-  // Function to stop walking (when the route is completed or user stops)
-  const stopWalking = () => {
-    setIsWalking(false);
-  };
-
-  // Send location to backend to check for nearby crime areas
   const sendLocationToBackend = async (coords) => {
     if (!coords) {
       console.log('No location data');
       return;
     }
-  
+
     try {
-      const response = await fetch('https://9de8-129-97-124-137.ngrok-free.app/check_crime', {
+      const response = await fetch('https://ffba-129-97-124-137.ngrok-free.app/check_crime', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latitude: coords.latitude, longitude: coords.longitude }),
       });
-  
+
       const data = await response.json();
-  
-      // Trigger alert only when walking and there's danger
       if (isWalking && data.status === 'danger' && data.nearby_crimes && data.nearby_crimes.length > 0) {
-        const crimeDetails = data.nearby_crimes.map(crime => 
-          `Location: ${crime.NearestIntersectionLocation}\n` +
-          `Rating: ${crime.rating}\n` +
-          `Crime Rate: ${crime.crime_rate}\n` +
-          `Distance: ${crime.distance.toFixed(2)} meters`
-        ).join('\n\n');
-  
-        // Show alert with detailed crime information
-        Alert.alert('Warning', 'You are near a crime area!\n\n' + crimeDetails, [
-          {
-            text: 'View Details',
-            onPress: () => console.log(crimeDetails),
-          },
-          { text: 'OK' },
-        ]);
-      }
-      // If the status is safe, log this or handle it in some way
-      else if (data.status === 'safe') {
+        // Start showing crime alerts
+        showCrimeAlert(0, data.nearby_crimes); // Start from the first crime
+      } else if (data.status === 'safe') {
         console.log('You are in a safe area.');
       }
     } catch (error) {
       console.error('Error sending location:', error);
     }
   };
-  
-  const handleSendDestination = async () => {
-    try {
-      if (!destination) {
-        Alert.alert('Error', 'Please enter a destination.');
-        return;
-      }
 
-      if (!location) {
-        Alert.alert('Error', 'Location data is not available.');
-        return;
-      }
+  const showCrimeAlert = (index, crimes) => {
+    if (index >= crimes.length) return; // Exit if no more crimes to show
 
-      const response = await fetch('https://9de8-129-97-124-137.ngrok-free.app/get_directions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+    const crime = crimes[index];
+    // Check if this crime has already been alerted
+    if (alertedCrimes.has(crime.id)) { // Assuming each crime has a unique 'id' property
+      showCrimeAlert(index + 1, crimes); // Show next crime alert
+      return;
+    }
+
+    const crimeDetails = 
+      `Location: ${crime.NearestIntersectionLocation}\n` +
+      `Rating: ${crime.rating}\n` +
+      `Crime Rate: ${crime.crime_rate}\n` +
+      `Distance: ${crime.distance.toFixed(2)} meters`;
+
+    Alert.alert(
+      'Warning',
+      `You are near a high crime area!\n\n${crimeDetails}`,
+      [
+        { 
+          text: 'Continue', 
+          onPress: () => {
+            setAlertedCrimes(prev => new Set(prev).add(crime.id)); // Add this crime to alerted set
+            showCrimeAlert(index + 1, crimes); // Show next crime alert
+          },
+          text: 'Share Location',
+          onPress: () => {
+            if (location){
+              const data = fetch('https://ffba-129-97-124-137.ngrok-free.app/share_location', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ latitude: location.latitude, longitude: location.longitude }),
+              });
+              if (data.ok) {
+                Alert.alert('Success', 'Location shared successfully!');
+              } else {
+                Alert.alert('Error', 'Failed to share location.');
+              }
+            }
+          },
+          
+
         },
+      ],
+    );
+  };
+
+  const handleSendDestination = async () => {
+    if (!destination) {
+      Alert.alert('Error', 'Please enter a destination.');
+      return;
+    }
+
+    if (!location) {
+      Alert.alert('Error', 'Location data is not available.');
+      return;
+    }
+
+    setLoadingDirections(true); // Start loading directions
+
+    try {
+      const response = await fetch('https://ffba-129-97-124-137.ngrok-free.app/get_directions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           origin_lat: location.latitude,
           origin_lng: location.longitude,
@@ -145,30 +161,30 @@ export default function App() {
       }
 
       const data = await response.json();
+      setDestination('');
+      Keyboard.dismiss();
 
-        // Clear the input field and dismiss the keyboard
-        setDestination('');
-        Keyboard.dismiss();
-        if (data.nearby_crimes){
-          setNearbyCrimes(data.nearby_crimes);
-          console.log('CRIME HERE' + data.nearby_crimes);
-        }
-        if (data.overview_polyline) {
-            const points = decodePolyline(data.overview_polyline);
-            setDirections(points);
+      if (data.nearby_crimes) {
+        setNearbyCrimes(data.nearby_crimes);
+      }
 
-            const destinationLatLng = {
-                latitude: data.destination_lat, // Get destination latitude from the response
-                longitude: data.destination_lng, // Get destination longitude from the response
-            };
-            setDestinationCoordinates(destinationLatLng);
-            startWalking(); // Set walking to true when a route is started
+      if (data.overview_polyline) {
+        const points = decodePolyline(data.overview_polyline);
+        setDirections(points);
+        const destinationLatLng = {
+          latitude: data.destination_lat,
+          longitude: data.destination_lng,
+        };
+        setDestinationCoordinates(destinationLatLng);
+        startWalking();
       } else {
         Alert.alert('Error', 'Could not retrieve directions.');
       }
     } catch (error) {
       console.error('Error sending destination:', error);
       Alert.alert('Error', 'Something went wrong!');
+    } finally {
+      setLoadingDirections(false); // Stop loading directions
     }
   };
 
@@ -178,15 +194,16 @@ export default function App() {
         <ActivityIndicator size="large" color="#0000ff" style={styles.loadingIndicator} />
       ) : (
         <>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your destination"
-            onChangeText={destination => setDestination(destination)}
-            placeholderTextColor="gray"
-            value={destination}
-          />
-          <Button title="Search" style={styles.button} onPress={handleSendDestination} />
-
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your destination"
+              onChangeText={setDestination}
+              placeholderTextColor="gray"
+              value={destination}
+            />
+            <Button title="Search" onPress={handleSendDestination} />
+          </View>
           <MapView
             style={styles.map}
             initialRegion={{
@@ -199,107 +216,75 @@ export default function App() {
             followsUserLocation={true}
           >
             {location && (
-              <Marker
-                coordinate={{
-                  latitude: location.latitude,
-                  longitude: location.longitude,
-                }}
-                title="You are here"
-              />
+              <Marker coordinate={location} title="You are here" />
             )}
             {destinationCoordinates && (
-              <Marker
-                coordinate={destinationCoordinates}
-                title="Destination"
-                pinColor="blue"
-              />
+              <Marker coordinate={destinationCoordinates} title="Destination" pinColor="blue" />
             )}
             {directions.length > 0 && (
-              <Polyline
-                coordinates={directions}
-                strokeColor="#000"
-                strokeWidth={6}
+              <Polyline coordinates={directions} strokeColor="#000" strokeWidth={6} />
+            )}
+            {nearbyCrimes.length > 0 && nearbyCrimes.map((crime, index) => (
+              <Marker
+                key={index}
+                coordinate={{
+                  latitude: crime['Latitude'],
+                  longitude: crime['Longitude'],
+                }}
+                title={`Crime at ${crime['NearestIntersectionLocation']}`}
+                description={`Rating: ${crime.rating}\nCrime Rate: ${crime.crime_rate}\nDistance: ${crime.distance.toFixed(2)} meters`}
+                pinColor="red"
               />
-            )}
-
-            {/* Render markers for nearby crimes */}
-            {nearbyCrimes.length > 0 && (
-              nearbyCrimes.map((crime, index) => (
-                <Marker
-                  key={index}
-                  coordinate={{
-                    latitude: crime['Latitude'], // Ensure this is the correct property name
-                    longitude: crime['Longitude'], // Ensure this is the correct property name
-                  }}
-                  title={`Crime at ${crime['NearestIntersectionLocation']}`}
-                  description={`Rating: ${crime.rating}\nCrime Rate: ${crime.crime_rate}\nDistance: ${crime.distance.toFixed(2)} meters`}
-                  pinColor="red"
-                />
-              ))
-            )}
+            ))}
           </MapView>
+          {loadingDirections && (
+            <ActivityIndicator size="large" color="#0000ff" style={styles.loadingIndicator} />
+          )}
         </>
       )}
     </View>
-  )
-};
-  
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-    },
-    searchContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      margin: 5,
-      paddingHorizontal: 10,
-      backgroundColor: '#F5F5F5',
-      position: 'absolute', // Position search input absolutely
-      top: 10, // Distance from the top
-      left: 10,
-      right: 10,
-      zIndex: 1, 
-      padding: 5,
-      borderRadius: 30,
-      shadowColor: '#000',
-      shadowOffset: {width: 0, height: 2},
-      shadowOpacity: 0.5,
-      shadowRadius: 2,
-      elevation: 3, // Shadow effect for better visibility
-    },
-    input: {
-      flex: 1,
-      borderRadius: 5,
-      padding: 5,
-      fontSize: 16,
-      paddingHorizontal: 10,
-      marginRight: 10,
-      borderColor: 'gray',
-      placeholderTextColor: 'gray', // Make sure the placeholder is visible
-    
-    },
-    button: {
-      marginLeft: 5,
-      backgroundColor: '#4285F4',
-      borderRadius: 20,
-      padding: 10,
-      justifyContent: 'center',
-      alignItems: 'center',
+  );
+}
 
-    },
-    map: {
-      ...StyleSheet.absoluteFillObject,
-      width: '100%',
-      height: '80%',
-      marginTop: 90,
-  
-    },
-    loadingIndicator: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-  })
-
-  
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    margin: 10,
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    right: 10,
+    zIndex: 1,
+    backgroundColor: 'white', // Ensure input is visible
+    borderRadius: 40,
+    padding: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  input: {
+    flex: 1,
+    borderRadius: 20,
+    padding: 10,
+    fontSize: 16,
+    borderColor: '#ccc',
+    marginRight: 5,
+  },
+  map: {
+    flex: 1,
+  },
+  loadingIndicator: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginLeft: -20,
+    marginTop: -20,
+  },
+});

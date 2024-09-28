@@ -16,6 +16,7 @@ MONGO_URI = os.getenv('MONGO_URI')
 client = MongoClient(MONGO_URI)  
 db = client.crime_data
 crime_collection = db.crimes
+contacts_collection = db.emergency_contacts  # Collection for emergency contacts
 
 # Replace this with your actual Google Maps API key
 GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY')
@@ -157,35 +158,48 @@ twilio_phone_number = os.getenv("TWILIO_PHONE_NUMBER")
 
 client = Client(account_sid, auth_token)
 
+@app.route('/add_contact', methods=['POST'])
+def add_contact():
+    data = request.get_json()
+    phone = data.get('phone')
+
+    if not phone:
+        return jsonify({"error": "Phone number is required"}), 400
+
+    # Save the contact to the database
+    contacts_collection.insert_one({"phone": phone})
+
+    return jsonify({"message": "Contact added successfully!"}), 201
+
+
 @app.route('/share_location', methods=['POST'])
-def share_location():
-    try:
-        # Extract latitude and longitude from the request
-        data = request.get_json()
-        latitude = data.get('latitude')
-        longitude = data.get('longitude')
+def send_alert():
+    data = request.get_json()
+    latitude = data.get('latitude')
+    longitude = data.get('longitude')
 
-        # List of emergency contacts
-        emergency_contacts = ['+16477653730', '+0987654321']  
+    if not latitude or not longitude:
+        return jsonify({"error": "Latitude and Longitude are required"}), 400
 
-        if not latitude or not longitude:
-            return jsonify({"error": "Latitude and Longitude are required"}), 400
+    # Retrieve emergency contacts from the database
+    contacts = list(contacts_collection.find({}, {'_id': 0}))
 
-        # Message to send
-        message_body = f"Emergency! User is located at: https://maps.google.com/?q={latitude},{longitude}"
+    # Prepare the message to send
+    message_body = f"Emergency! User is located at: https://maps.google.com/?q={latitude},{longitude}"
 
-        # Send the message to all emergency contacts
-        for contact in emergency_contacts:
-            message = client.messages.create(
-                body=message_body,
-                from_=twilio_phone_number,
-                to=contact
-            )
+    # Send the message to all emergency contacts
+    for contact in contacts:
+        phone = contact['phone']
+        client.messages.create(
+            body=message_body,
+            from_=twilio_phone_number,
+            to=phone
+        )
 
-        return jsonify({"message": "Location shared successfully!"}), 200
+    return jsonify({"message": "Alert sent to emergency contacts!"}), 200
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+
+
 
 def get_address_from_coords(lat, lon):
     try:

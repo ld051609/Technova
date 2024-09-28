@@ -4,18 +4,9 @@ import MainPage from './components/MainPage';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { FIREBASE_AUTH } from '../configs/firebaseConfig';
+import TabNavigator from './components/TabNavigator';
 
 const Stack = createNativeStackNavigator();
-
-const InsideStack = createNativeStackNavigator();
-
-function InsideLayout() {
-  return (
-    <InsideStack.Navigator>
-      <InsideStack.Screen name="MainPage" component={MainPage} />
-    </InsideStack.Navigator>
-  );
-}
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -31,7 +22,7 @@ export default function App() {
   return (
     <Stack.Navigator initialRouteName="Login">
       {user ? (
-        <Stack.Screen name="MainPage" component={MainPage} options={{ headerShown: false }} />
+        <Stack.Screen name="MainPage" component={TabNavigator} options={{ headerShown: false }} />
       ) : (
         <Stack.Screen name="Login" component={LoginPage} options={{ headerShown: false }} />
       )}

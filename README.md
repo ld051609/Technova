@@ -12,7 +12,12 @@
    check .sampleenv for variables
 
 3. Start the app
+   frontend
 
    ```bash
     npx expo start --tunnel
+   ```
+   backend
+   ```bash
+    python app.py
    ```

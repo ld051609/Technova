@@ -38,7 +38,7 @@ const LoginPage = () => {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={styles.outerContainer}>
                 <StatusBar barStyle="default" />
-                <Text style={styles.programNameText}>Program Name</Text>
+                <Text style={styles.programNameText}>SafeTrip</Text>
                 <View style={styles.innerContainer}>
                     <KeyboardAvoidingView behavior='padding'>
                         <LoginInput 
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
     },
     programNameText: {
-        fontSize: 40,
+        fontSize: 60,
         color:'#00008b',
         textAlign: 'center',
         marginBottom: 50,

@@ -14,7 +14,9 @@ export default function Map() {
   const [isWalking, setIsWalking] = useState(false);
   const [nearbyCrimes, setNearbyCrimes] = useState([]);
   const [loadingDirections, setLoadingDirections] = useState(false);
-  const [alertedCrimes, setAlertedCrimes] = useState(new Set()); // State for tracking alerted crimes
+  const [alertedCrimes, setAlertedCrimes] = useState(new Set()); 
+
+  const ngrok_url = process.env.EXPO_PUBLIC_NGROK_URL;
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -66,7 +68,7 @@ export default function Map() {
     }
 
     try {
-      const response = await fetch('https://ffba-129-97-124-137.ngrok-free.app/check_crime', {
+      const response = await fetch(`${ngrok_url}/check_crime`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ latitude: coords.latitude, longitude: coords.longitude }),
@@ -89,7 +91,7 @@ export default function Map() {
 
     const crime = crimes[index];
     // Check if this crime has already been alerted
-    if (alertedCrimes.has(crime.id)) { // Assuming each crime has a unique 'id' property
+    if (alertedCrimes.has(crime.id)) { 
       showCrimeAlert(index + 1, crimes); // Show next crime alert
       return;
     }
@@ -111,22 +113,27 @@ export default function Map() {
             showCrimeAlert(index + 1, crimes); // Show next crime alert
           },
           text: 'Share Location',
-          onPress: () => {
-            if (location){
-              const data = fetch('https://ffba-129-97-124-137.ngrok-free.app/share_location', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ latitude: location.latitude, longitude: location.longitude }),
-              });
-              if (data.ok) {
-                Alert.alert('Success', 'Location shared successfully!');
-              } else {
-                Alert.alert('Error', 'Failed to share location.');
+          onPress: async() => {
+            if (location) {
+              try {
+                const response = await fetch(`${ngrok_url}/share_location`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ latitude: location.latitude, longitude: location.longitude }),
+                });
+    
+                // Check if response is ok (status 200-299)
+                if (response.ok) {
+                  Alert.alert('Success', 'Location shared successfully!');
+                } else {
+                  Alert.alert('Error', 'Failed to share location.');
+                }
+              } catch (error) {
+                console.error(error);
+                Alert.alert('Error', 'An error occurred while sharing location.');
               }
             }
           },
-          
-
         },
       ],
     );
@@ -146,7 +153,7 @@ export default function Map() {
     setLoadingDirections(true); // Start loading directions
 
     try {
-      const response = await fetch('https://ffba-129-97-124-137.ngrok-free.app/get_directions', {
+      const response = await fetch(`${ngrok_url}/get_directions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -263,7 +270,7 @@ const styles = StyleSheet.create({
     left: 10,
     right: 10,
     zIndex: 1,
-    backgroundColor: 'white', // Ensure input is visible
+    backgroundColor: 'white',
     borderRadius: 40,
     padding: 5,
     shadowColor: '#000',

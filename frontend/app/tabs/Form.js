@@ -7,7 +7,9 @@ const Form = () => {
     const [coords, setCoords] = useState(null);
     const [loading, setLoading] = useState(false);
 
-    // Fetch user's current location
+    const ngrok_url = process.env.EXPO_PUBLIC_NGROK_URL;
+    console.log("!!!",ngrok_url)
+
     useEffect(() => {
         const getLocation = async () => {
             let { status } = await Location.requestForegroundPermissionsAsync();
@@ -27,9 +29,9 @@ const Form = () => {
             return;
         }
 
-        setLoading(true); // Show loading indicator during form submission
+        setLoading(true);
         try {
-            const response = await fetch('https://ffba-129-97-124-137.ngrok-free.app/form', {
+            const response = await fetch(`${ngrok_url}/form`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -41,6 +43,7 @@ const Form = () => {
 
             if (response.ok) {
                 Alert.alert("Form submitted successfully");
+                setDescription("");
             } else {
                 Alert.alert("Submission failed. Please try again.");
             }

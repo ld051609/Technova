@@ -2,16 +2,16 @@ import pandas as pd
 from pymongo import MongoClient
 
 # Load data from CSV file
-csv_file_path = './dataset/crime_rate.csv'  # Replace with your CSV file path
+csv_file_path = './dataset/crime_rate.csv'
 df = pd.read_csv(csv_file_path)
 
 # Connect to MongoDB
-client = MongoClient('mongodb+srv://laniD:12345@cluster0.i5af7yo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')  # Replace with your MongoDB connection string
-db = client.crime_data  # Create or switch to the 'crime_data' database
-crime_collection = db.crimes  # Create or switch to the 'crimes' collection
+client = MongoClient('mongodb://localhost:27017/') 
+db = client.crime_data 
+crime_collection = db.crimes  
 
-# Convert DataFrame to dictionary format and insert into MongoDB
-crime_records = df.to_dict('records')  # Convert DataFrame to a list of dictionaries
-crime_collection.insert_many(crime_records)  # Insert records into the collection
+
+crime_records = df.to_dict('records')
+crime_collection.insert_many(crime_records) 
 
 print("Data imported successfully!")

@@ -14,6 +14,7 @@ app = Flask(__name__)
 client = MongoClient('mongodb://localhost:27017/')  
 db = client['crime_data']
 crime_collection = db['crimes']
+crime_report = db['crimes_report']
 contacts_collection = db['emergency_contacts'] 
 
 # Replace this with your actual Google Maps API key
@@ -240,7 +241,7 @@ def submit_form():
             "address": address
         }
 
-        crime_collection.insert_one(report) 
+        crime_report.insert_one(report) 
 
         return jsonify({"message": "Form is submitted and data is stored!"}), 200
 

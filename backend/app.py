@@ -11,12 +11,11 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Connect to MongoDB
-MONGO_URI = os.getenv('MONGO_URI')
-client = MongoClient(MONGO_URI)  
-db = client.crime_data
-crime_collection = db.crimes
-contacts_collection = db.emergency_contacts  # Collection for emergency contacts
+client = MongoClient('mongodb://localhost:27017/')  
+db = client['crime_data']
+crime_collection = db['crimes']
+crime_report = db['crimes_report']
+contacts_collection = db['emergency_contacts'] 
 
 # Replace this with your actual Google Maps API key
 GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY')
@@ -24,6 +23,7 @@ GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY')
 @app.route('/get_directions', methods=['POST'])
 def get_directions():
     data = request.get_json()
+ 
     origin_lat = data.get('origin_lat')
     origin_lng = data.get('origin_lng')
     destination = data.get('destination')
@@ -33,7 +33,6 @@ def get_directions():
 
     # Send request to Google Maps Directions API
     response = requests.get(url)
-
     if response.status_code == 200:
         directions_data = response.json()
         # Get the first route
@@ -59,7 +58,6 @@ def get_directions():
 def fetch_nearby_crimes_along_route(overview_polyline):
     # Decode the polyline to get a list of points along the route
     route_points = polyline.decode(overview_polyline)
-    
     nearby_crimes = []
     detection_radius = 0.1  # 100 m radius
     unique_crime_ids = set()  # To keep track of unique crime records by ID
@@ -73,7 +71,7 @@ def fetch_nearby_crimes_along_route(overview_polyline):
             crime_lat = record['Latitude']
             crime_lon = record['Longitude']
             distance = haversine(lat, lng, crime_lat, crime_lon)
-
+            
             # Check if the crime is within the detection radius
             if distance < detection_radius:
                 record_id = str(record['_id'])  # Convert ObjectId to string for JSON serialization
@@ -94,6 +92,7 @@ def fetch_nearby_crimes_along_route(overview_polyline):
 
     return nearby_crimes
 
+
 @app.route('/check_crime', methods=['POST'])
 def check_crime():
     data = request.get_json()
@@ -101,18 +100,19 @@ def check_crime():
     user_lon = data.get('longitude')
     detection_radius = 0.5  # 500 m radius
 
+
     if user_lat is None or user_lon is None:
         return jsonify({"error": "Invalid input"}), 400
 
     # Query MongoDB for intersections within the detection radius
     nearby_crimes = []
     unique_crime_locations = set()  # To track unique crime records by NearestIntersectionLocation
-
+  
     for record in crime_collection.find():
         crime_lat = record['Latitude']
         crime_lon = record['Longitude']
         distance = haversine(user_lat, user_lon, crime_lat, crime_lon)
-        
+        print(distance, detection_radius)
         if distance < detection_radius:
             # Check the crime rating
             crime_rating = record.get('rating', 'Low')  # Default to 'Low' if not specified
@@ -166,10 +166,12 @@ def add_contact():
     if not phone:
         return jsonify({"error": "Phone number is required"}), 400
 
-    # Save the contact to the database
-    contacts_collection.insert_one({"phone": phone})
+    result = contacts_collection.insert_one({"phone": phone})
 
-    return jsonify({"message": "Contact added successfully!"}), 201
+    if result.acknowledged:
+        return jsonify({"message": "Contact added successfully!"}), 201
+    else:
+        return jsonify({"error": "Failed to add contact."}), 500
 
 
 @app.route('/share_location', methods=['POST'])
@@ -227,12 +229,11 @@ def submit_form():
         if not lat or not lon or not crime:
             return jsonify({"error": "Missing required data"}), 400
         
-        # Get address from coordinates
+
         address = get_address_from_coords(lat, lon)
         if not address:
             return jsonify({"error": "Could not retrieve address from coordinates"}), 400
 
-        # Prepare document for MongoDB
         report = {
             "latitude": lat,
             "longitude": lon,
@@ -240,8 +241,7 @@ def submit_form():
             "address": address
         }
 
-        # Insert into MongoDB
-        crime_collection.insert_one(report)  # Corrected to use crime_collection
+        crime_report.insert_one(report) 
 
         return jsonify({"message": "Form is submitted and data is stored!"}), 200
 
@@ -250,4 +250,4 @@ def submit_form():
         return jsonify({"error": "An error occurred during form submission."}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=5002)

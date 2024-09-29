@@ -17,6 +17,7 @@ export default function Map() {
   const [alertedCrimes, setAlertedCrimes] = useState(new Set()); 
 
   const ngrok_url = process.env.EXPO_PUBLIC_NGROK_URL;
+  console.log(ngrok_url)
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -122,7 +123,6 @@ export default function Map() {
                   body: JSON.stringify({ latitude: location.latitude, longitude: location.longitude }),
                 });
     
-                // Check if response is ok (status 200-299)
                 if (response.ok) {
                   Alert.alert('Success', 'Location shared successfully!');
                 } else {

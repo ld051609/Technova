@@ -6,7 +6,9 @@ Additionally, users can report any crimes they encounter, and in case of an emer
 ## Get started
 
 1. Install dependencies
-   npm i
+   ```bash
+    npm install for frontend and backend
+   ```
 
 2. add .env file for backend and frontend
    check .sampleenv for variables

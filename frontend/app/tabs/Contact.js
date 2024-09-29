@@ -3,7 +3,8 @@ import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, Keyboard, T
 
 const EmergencyContacts = () => {
   const [phone, setPhone] = useState('');
-
+  const ngrok_url = process.env.EXPO_PUBLIC_NGROK_URL;
+  
   const handleAddContact = async () => {
     if (!phone) {
       Alert.alert('Please enter a phone number');
@@ -11,7 +12,7 @@ const EmergencyContacts = () => {
     }
 
     try {
-      const response = await fetch('http://<YOUR_BACKEND_URL>/add_contact', {
+      const response = await fetch(`${ngrok_url}/add_contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -35,6 +36,7 @@ const EmergencyContacts = () => {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.container}>
         <Text style={styles.title}>Emergency Contacts</Text>
+        <Text style={styles.explain}>When you share your location, a message with your location will be sent to the people in the emergency contacts</Text>
 
         <TextInput
           placeholder="Enter phone number"
@@ -42,7 +44,7 @@ const EmergencyContacts = () => {
           onChangeText={setPhone}
           keyboardType="phone-pad"
           style={styles.input}
-          placeholderTextColor="grey"  // Set placeholder color to black
+          placeholderTextColor="grey" 
 
         />
 
@@ -67,6 +69,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
   },
+  explain: {
+    fontSize: 12,
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
@@ -75,8 +83,6 @@ const styles = StyleSheet.create({
     padding: 15,
     fontSize: 16,
     backgroundColor: '#fff',
-    elevation: 1, // Shadow effect for Android
-    shadowColor: '#000', // Shadow effect for iOS
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,

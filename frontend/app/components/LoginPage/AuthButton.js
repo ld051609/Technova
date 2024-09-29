@@ -22,20 +22,19 @@ const AuthButton = ({ signIn, signUp }) => {
 };
 
 const styles = StyleSheet.create({
-    loginBtn: {
-        marginVertical: 10,
-        height: 50,
-        borderRadius: 10,
-        backgroundColor: '#007BFF',
-        justifyContent: 'center',
+    loginBtn:{
+        backgroundColor: '#007bff',
+        paddingVertical: 10,
+        marginVertical:10,
+        borderRadius: 30,
         alignItems: 'center',
         shadowColor: '#000',
+        shadowOpacity: 0.4,
+        shadowRadius: 5,
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
     },
     buttonActive: {
-        backgroundColor: '#0056b3',
+        backgroundColor: '#0056:b3',
     },
     loginText: {
         color: '#fff',

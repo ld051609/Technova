@@ -4,12 +4,13 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { FIREBASE_AUTH } from '../configs/firebaseConfig';
 import TabNavigator from './components/TabNavigator';
+import { LogBox } from 'react-native';
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   const [user, setUser] = useState(null);
-
+  LogBox.ignoreAllLogs();
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, (user) => {
       setUser(user);

@@ -7,8 +7,6 @@ from dotenv import load_dotenv
 import polyline  # Install the polyline package using pip
 from twilio.rest import Client
 
-load_dotenv()
-
 app = Flask(__name__)
 
 client = MongoClient('mongodb://localhost:27017/')  
